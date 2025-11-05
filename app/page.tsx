@@ -13,8 +13,10 @@ export default function Home() {
   const router = useRouter();
   const { saveSession } = useLocalSession();
   const [firstPrompt, setFirstPrompt] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (email: string, personaHint: string) => {
+    setIsLoading(true);
     try {
       const result = await postStartSession(email, personaHint);
       
@@ -34,6 +36,7 @@ export default function Home() {
         router.push(`/answer/${result.session_id}`);
       }, 1000);
     } catch (err) {
+      setIsLoading(false);
       throw err;
     }
   };
@@ -72,7 +75,7 @@ export default function Home() {
         </div>
 
         <div className="bg-[#1B1B1B] border-2 border-[#00FFFF] rounded-lg p-6 neon-border-cyan">
-          <UserEntryForm onSubmit={handleSubmit} />
+          <UserEntryForm onSubmit={handleSubmit} disabled={isLoading} />
         </div>
 
         {firstPrompt && (

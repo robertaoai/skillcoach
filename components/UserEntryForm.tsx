@@ -1,96 +1,71 @@
 'use client';
 
 import { useState } from 'react';
-import { ValidatedEntryField } from './ValidatedEntryField';
-import { CyberButton } from './CyberButton';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Button } from '@/components/ui/button';
+import { ValidatedEntryField } from '@/components/ValidatedEntryField';
+import { toast } from 'sonner';
+
+const formSchema = z.object({
+  email: z.string().email('Please enter a valid email address'),
+  personaHint: z.string().min(2, 'Please enter at least 2 characters'),
+});
+
+type FormData = z.infer<typeof formSchema>;
 
 interface UserEntryFormProps {
   onSubmit: (email: string, personaHint: string) => Promise<void>;
+  disabled?: boolean;
 }
 
-export function UserEntryForm({ onSubmit }: UserEntryFormProps) {
-  const [email, setEmail] = useState('');
-  const [personaHint, setPersonaHint] = useState('');
-  const [errors, setErrors] = useState<{ email?: string; persona?: string }>({});
-  const [loading, setLoading] = useState(false);
+export function UserEntryForm({ onSubmit, disabled = false }: UserEntryFormProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormData>({
+    resolver: zodResolver(formSchema),
+  });
 
-  const validateEmail = (email: string) => {
-    const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return pattern.test(email);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const newErrors: { email?: string; persona?: string } = {};
-    
-    if (!email || !validateEmail(email)) {
-      newErrors.email = 'A valid email is required.';
-    }
-    
-    if (personaHint && typeof personaHint !== 'string') {
-      newErrors.persona = 'Persona hint must be a string.';
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
-    setErrors({});
-    setLoading(true);
-
+  const onFormSubmit = async (data: FormData) => {
+    setIsSubmitting(true);
     try {
-      await onSubmit(email, personaHint);
-    } catch (err: any) {
-      const backendErrors = err.validation || [];
-      const mapped: { email?: string; persona?: string } = {};
-      
-      backendErrors.forEach((msg: string) => {
-        if (msg.toLowerCase().includes('email')) {
-          mapped.email = msg;
-        }
-        if (msg.toLowerCase().includes('persona') || msg.toLowerCase().includes('hint')) {
-          mapped.persona = msg;
-        }
-      });
-      
-      setErrors(mapped);
-    } finally {
-      setLoading(false);
+      await onSubmit(data.email, data.personaHint);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to start session');
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
       <ValidatedEntryField
-        id="email"
         label="Email Address"
-        type="email"
-        value={email}
-        onChange={setEmail}
-        error={errors.email}
-        placeholder="your.email@domain.com"
+        placeholder="your.email@company.com"
+        error={errors.email?.message}
+        disabled={isSubmitting || disabled}
+        {...register('email')}
       />
       
       <ValidatedEntryField
-        id="persona"
-        label="Role / Persona (Optional)"
-        type="textarea"
-        value={personaHint}
-        onChange={setPersonaHint}
-        error={errors.persona}
-        placeholder="e.g., Product Manager, Developer, Designer..."
+        label="Your Role"
+        placeholder="e.g., Marketing Manager, Software Developer"
+        error={errors.personaHint?.message}
+        disabled={isSubmitting || disabled}
+        {...register('personaHint')}
       />
-      
-      <CyberButton
+
+      <Button
         type="submit"
-        loading={loading}
-        variant="primary"
-        className="w-full"
+        disabled={isSubmitting || disabled}
+        className="w-full bg-[#00FFFF] hover:bg-[#00FFFF]/80 text-black font-['Orbitron'] font-bold uppercase tracking-wider neon-glow-cyan"
       >
-        {loading ? 'Initializing...' : 'Begin Assessment'}
-      </CyberButton>
+        {isSubmitting ? 'Initializing...' : 'Start Assessment'}
+      </Button>
     </form>
   );
 }
