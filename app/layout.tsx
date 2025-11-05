@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { Toaster } from 'sonner';
+import { Suspense } from 'react';
 
 export const metadata: Metadata = {
   title: 'AI Skills Coach - Built with ChatAndBuild',
@@ -28,7 +29,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        {children}
+        <Suspense fallback={<div>Loading...</div>}>
+          {children}
+        </Suspense>
         <Toaster position="top-right" theme="dark" />
       </body>
     </html>
